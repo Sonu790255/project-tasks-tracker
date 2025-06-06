@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../api/config';
 
 const Add = () => {
   const navigate = useNavigate();
+  const [error, setError] = useState(null);
   const [newProject, setNewProject] = useState({
     name: '',
-    tasks: '',
-    deadline: ''
+    description: '',
+    startDate: '',
+    endDate: '',
+    status: 'pending'
   });
 
   const handleInputChange = (e) => {
@@ -17,24 +21,18 @@ const Add = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const project = {
-      id: Date.now(),
-      name: newProject.name,
-      tasks: parseInt(newProject.tasks),
-      deadline: newProject.deadline
-    };
-    
-    // Get existing projects from localStorage
-    const existingProjects = JSON.parse(localStorage.getItem('projects') || '[]');
-    // Add new project
-    const updatedProjects = [...existingProjects, project];
-    // Save to localStorage
-    localStorage.setItem('projects', JSON.stringify(updatedProjects));
-    
-    // Navigate back to projects page
-    navigate('/projects');
+    try {
+      console.log('Submitting project data:', newProject);
+      const response = await api.post('/projects', newProject);
+      console.log('API Response:', response.data);
+      navigate('/projects');
+    } catch (err) {
+      console.error('Full error object:', err);
+      console.error('Error response:', err.response?.data);
+      setError(err.response?.data?.message || 'Failed to create project. Please try again later.');
+    }
   };
 
   return (
@@ -55,6 +53,8 @@ const Add = () => {
         </button>
       </div>
 
+      {error && <div className="error-message" style={{ color: 'red', marginBottom: '1rem' }}>{error}</div>}
+
       <div style={{
         backgroundColor: 'white',
         padding: '2rem',
@@ -68,7 +68,7 @@ const Add = () => {
               marginBottom: '0.5rem',
               fontWeight: '500'
             }}>
-              Project Name
+              Project Name *
             </label>
             <input
               type="text"
@@ -93,15 +93,36 @@ const Add = () => {
               marginBottom: '0.5rem',
               fontWeight: '500'
             }}>
-              Number of Tasks
+              Description
             </label>
-            <input
-              type="number"
-              name="tasks"
-              value={newProject.tasks}
+            <textarea
+              name="description"
+              value={newProject.description}
               onChange={handleInputChange}
-              required
-              min="0"
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                borderRadius: '4px',
+                border: '1px solid #ddd',
+                fontSize: '1rem',
+                minHeight: '100px'
+              }}
+              placeholder="Enter project description"
+            />
+          </div>
+
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{ 
+              display: 'block', 
+              marginBottom: '0.5rem',
+              fontWeight: '500'
+            }}>
+              Status
+            </label>
+            <select
+              name="status"
+              value={newProject.status}
+              onChange={handleInputChange}
               style={{
                 width: '100%',
                 padding: '0.75rem',
@@ -109,7 +130,34 @@ const Add = () => {
                 border: '1px solid #ddd',
                 fontSize: '1rem'
               }}
-              placeholder="Enter number of tasks"
+            >
+              <option value="pending">Pending</option>
+              <option value="in-progress">In Progress</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
+
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{ 
+              display: 'block', 
+              marginBottom: '0.5rem',
+              fontWeight: '500'
+            }}>
+              Start Date *
+            </label>
+            <input
+              type="date"
+              name="startDate"
+              value={newProject.startDate}
+              onChange={handleInputChange}
+              required
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                borderRadius: '4px',
+                border: '1px solid #ddd',
+                fontSize: '1rem'
+              }}
             />
           </div>
 
@@ -119,14 +167,13 @@ const Add = () => {
               marginBottom: '0.5rem',
               fontWeight: '500'
             }}>
-              Deadline
+              End Date
             </label>
             <input
               type="date"
-              name="deadline"
-              value={newProject.deadline}
+              name="endDate"
+              value={newProject.endDate}
               onChange={handleInputChange}
-              required
               style={{
                 width: '100%',
                 padding: '0.75rem',
@@ -136,7 +183,6 @@ const Add = () => {
               }}
             />
           </div>
-
 
           <div style={{ display: 'flex', gap: '1rem' }}>
             <button 

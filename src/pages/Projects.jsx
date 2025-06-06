@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../api/config';
 
 const Projects = () => {
   const navigate = useNavigate();
@@ -8,24 +9,42 @@ const Projects = () => {
   const [projectToDelete, setProjectToDelete] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Load projects from localStorage
-    const savedProjects = JSON.parse(localStorage.getItem('projects') || '[]');
-    setProjects(savedProjects);
+    fetchProjects();
   }, []);
+
+  const fetchProjects = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/projects');
+      setProjects(response.data);
+      setError(null);
+    } catch (err) {
+      setError('Failed to fetch projects. Please try again later.');
+      console.error('Error fetching projects:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleDeleteClick = (projectId) => {
     setProjectToDelete(projectId);
     setShowDeleteModal(true);
   };
 
-  const handleConfirmDelete = () => {
-    const updatedProjects = projects.filter(project => project.id !== projectToDelete);
-    setProjects(updatedProjects);
-    localStorage.setItem('projects', JSON.stringify(updatedProjects));
-    setShowDeleteModal(false);
-    setProjectToDelete(null);
+  const handleConfirmDelete = async () => {
+    try {
+      await api.delete(`/projects/${projectToDelete}`);
+      setProjects(projects.filter(project => project._id !== projectToDelete));
+      setShowDeleteModal(false);
+      setProjectToDelete(null);
+    } catch (err) {
+      setError('Failed to delete project. Please try again later.');
+      console.error('Error deleting project:', err);
+    }
   };
 
   const handleCancelDelete = () => {
@@ -46,20 +65,32 @@ const Projects = () => {
     }));
   };
 
-  const handleSaveEdit = () => {
-    const updatedProjects = projects.map(project => 
-      project.id === editingProject.id ? editingProject : project
-    );
-    setProjects(updatedProjects);
-    localStorage.setItem('projects', JSON.stringify(updatedProjects));
-    setShowEditModal(false);
-    setEditingProject(null);
+  const handleSaveEdit = async () => {
+    try {
+      const response = await api.put(`/projects/${editingProject._id}`, editingProject);
+      setProjects(projects.map(project => 
+        project._id === editingProject._id ? response.data : project
+      ));
+      setShowEditModal(false);
+      setEditingProject(null);
+    } catch (err) {
+      setError('Failed to update project. Please try again later.');
+      console.error('Error updating project:', err);
+    }
   };
 
   const handleCancelEdit = () => {
     setShowEditModal(false);
     setEditingProject(null);
   };
+
+  if (loading) {
+    return <div>Loading projects...</div>;
+  }
+
+  if (error) {
+    return <div className="error-message">{error}</div>;
+  }
 
   return (
     <div>
@@ -79,17 +110,21 @@ const Projects = () => {
           <thead>
             <tr>
               <th>Project Name</th>
-              <th>Tasks</th>
-              <th>Deadline</th>
+              <th>Description</th>
+              <th>Status</th>
+              <th>Start Date</th>
+              <th>End Date</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {projects.map(project => (
-              <tr key={project.id}>
+              <tr key={project._id}>
                 <td>{project.name}</td>
-                <td>{project.tasks}</td>
-                <td>{new Date(project.deadline).toLocaleDateString()}</td>
+                <td>{project.description}</td>
+                <td>{project.status}</td>
+                <td>{new Date(project.startDate).toLocaleDateString()}</td>
+                <td>{project.endDate ? new Date(project.endDate).toLocaleDateString() : 'N/A'}</td>
                 <td>
                   <button 
                     className="button" 
@@ -101,7 +136,7 @@ const Projects = () => {
                   <button 
                     className="button" 
                     style={{ backgroundColor: '#ff7675', color: 'white' }}
-                    onClick={() => handleDeleteClick(project.id)}
+                    onClick={() => handleDeleteClick(project._id)}
                   >
                     Delete
                   </button>
@@ -192,11 +227,44 @@ const Projects = () => {
               />
             </div>
             <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem' }}>Tasks</label>
+              <label style={{ display: 'block', marginBottom: '0.5rem' }}>Description</label>
+              <textarea
+                name="description"
+                value={editingProject.description}
+                onChange={handleEditChange}
+                style={{
+                  width: '100%',
+                  padding: '0.5rem',
+                  borderRadius: '4px',
+                  border: '1px solid #ccc',
+                  minHeight: '100px'
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem' }}>Status</label>
+              <select
+                name="status"
+                value={editingProject.status}
+                onChange={handleEditChange}
+                style={{
+                  width: '100%',
+                  padding: '0.5rem',
+                  borderRadius: '4px',
+                  border: '1px solid #ccc'
+                }}
+              >
+                <option value="pending">Pending</option>
+                <option value="in-progress">In Progress</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem' }}>Start Date</label>
               <input
-                type="text"
-                name="tasks"
-                value={editingProject.tasks}
+                type="date"
+                name="startDate"
+                value={editingProject.startDate.split('T')[0]}
                 onChange={handleEditChange}
                 style={{
                   width: '100%',
@@ -207,11 +275,11 @@ const Projects = () => {
               />
             </div>
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem' }}>Deadline</label>
+              <label style={{ display: 'block', marginBottom: '0.5rem' }}>End Date</label>
               <input
                 type="date"
-                name="deadline"
-                value={editingProject.deadline.split('T')[0]}
+                name="endDate"
+                value={editingProject.endDate ? editingProject.endDate.split('T')[0] : ''}
                 onChange={handleEditChange}
                 style={{
                   width: '100%',

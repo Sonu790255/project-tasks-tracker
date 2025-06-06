@@ -22,6 +22,9 @@ const Dashboard = () => {
         ))}
       </div>
 
+<<<<<<< HEAD
+   
+=======
       {/* <div className="dashboard-container">
         <h2 style={{ marginBottom: '1.5rem', fontSize: '20px' }}>Recent Activity</h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -39,6 +42,7 @@ const Dashboard = () => {
           </div>
         </div>
       </div> */}
+>>>>>>> 5a2e9d67a09173765653faa9f5049be102cc031b
     </div>
   );
 };
